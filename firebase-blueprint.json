@@ -1,0 +1,188 @@
+{
+  "entities": {
+    "UserBackupProfile": {
+      "title": "UserBackupProfile",
+      "description": "Cloud backup of the user's study profile, gamification stats, badges, and reading plan progress.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Firebase Auth UID of the profile owner."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name shown in the profile."
+        },
+        "xp": {
+          "type": "integer",
+          "description": "Total experience points earned."
+        },
+        "streakDays": {
+          "type": "integer",
+          "description": "Consecutive daily study streak count."
+        },
+        "totalStudySeconds": {
+          "type": "integer",
+          "description": "Total study time accumulated in seconds."
+        },
+        "completedLessonIds": {
+          "type": "array",
+          "description": "List of completed lesson numbers (1..27)."
+        },
+        "unlockedBadgeIds": {
+          "type": "array",
+          "description": "List of unlocked gamification badge identifiers."
+        },
+        "selectedPlanId": {
+          "type": "string",
+          "description": "Active daily reading plan identifier."
+        },
+        "completedPlanDays": {
+          "type": "array",
+          "description": "List of completed day numbers in the active reading plan."
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "enum": ["pt", "en", "es"],
+          "description": "Selected UI language code."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of profile creation (FieldValue.serverTimestamp())."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of last cloud backup sync (FieldValue.serverTimestamp())."
+        }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "xp",
+        "streakDays",
+        "totalStudySeconds",
+        "completedLessonIds",
+        "unlockedBadgeIds",
+        "selectedPlanId",
+        "completedPlanDays",
+        "preferredLanguage",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "LessonProgressBackup": {
+      "title": "LessonProgressBackup",
+      "description": "Cloud backup record for a single Ouvindo a Voz de Deus lesson.",
+      "type": "object",
+      "properties": {
+        "lessonNumber": {
+          "type": "integer",
+          "description": "Lesson index from 1 to 27."
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Whether the lesson and quiz were completed."
+        },
+        "quizScore": {
+          "type": "integer",
+          "description": "Best quiz score achieved."
+        },
+        "quizTotal": {
+          "type": "integer",
+          "description": "Total questions in the lesson quiz."
+        },
+        "studySeconds": {
+          "type": "integer",
+          "description": "Time spent studying this lesson in seconds."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on update."
+        }
+      },
+      "required": [
+        "lessonNumber",
+        "completed",
+        "quizScore",
+        "quizTotal",
+        "studySeconds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "BibleNoteBackup": {
+      "title": "BibleNoteBackup",
+      "description": "Cloud backup of a user's personal Bible verse note and highlight.",
+      "type": "object",
+      "properties": {
+        "bookId": {
+          "type": "string",
+          "description": "Bible book identifier."
+        },
+        "chapter": {
+          "type": "integer",
+          "description": "Chapter number."
+        },
+        "verse": {
+          "type": "integer",
+          "description": "Verse number."
+        },
+        "referenceLabel": {
+          "type": "string",
+          "description": "Human-readable verse reference label."
+        },
+        "noteText": {
+          "type": "string",
+          "description": "Personal study note content."
+        },
+        "highlightColor": {
+          "type": "string",
+          "enum": ["gold", "sky", "emerald", "coral", "none"],
+          "description": "Highlight color tag for the verse."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on creation."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp on update."
+        }
+      },
+      "required": [
+        "bookId",
+        "chapter",
+        "verse",
+        "referenceLabel",
+        "noteText",
+        "highlightColor",
+        "createdAt",
+        "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserBackupProfile" },
+      "description": "Stores each user's study profile, gamification stats, and reading plan state."
+    },
+    "/users/{userId}/lesson_progress/{lessonId}": {
+      "schema": { "$ref": "#/entities/LessonProgressBackup" },
+      "description": "Stores per-lesson quiz scores, completion, and study duration."
+    },
+    "/users/{userId}/bible_notes/{noteId}": {
+      "schema": { "$ref": "#/entities/BibleNoteBackup" },
+      "description": "Stores personal Bible study notes and verse highlights."
+    }
+  }
+}

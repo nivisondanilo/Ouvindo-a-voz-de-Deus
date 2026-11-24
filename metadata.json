@@ -1,0 +1,6 @@
+{
+  "name": "Voz de Deus",
+  "description": "Interactive Adventist Bible study app based on Ouvindo a Voz de Deus for kids and teens, with quizzes, gamification, offline Bible, notes, daily plans, TTS accessibility, and cloud backup.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

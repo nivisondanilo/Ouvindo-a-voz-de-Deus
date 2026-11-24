@@ -1,0 +1,157 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserBackupProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 60 &&
+             data.xp is int && data.xp >= 0 && data.xp <= 1000000 &&
+             data.streakDays is int && data.streakDays >= 0 && data.streakDays <= 10000 &&
+             data.totalStudySeconds is int && data.totalStudySeconds >= 0 && data.totalStudySeconds <= 100000000 &&
+             data.completedLessonIds is list && data.completedLessonIds.size() <= 30 &&
+             (data.completedLessonIds.size() == 0 || data.completedLessonIds[0] is int) &&
+             data.unlockedBadgeIds is list && data.unlockedBadgeIds.size() <= 30 &&
+             (data.unlockedBadgeIds.size() == 0 || data.unlockedBadgeIds[0] is string) &&
+             data.selectedPlanId is string && data.selectedPlanId.size() >= 1 && data.selectedPlanId.size() <= 40 &&
+             data.completedPlanDays is list && data.completedPlanDays.size() <= 60 &&
+             (data.completedPlanDays.size() == 0 || data.completedPlanDays[0] is int) &&
+             data.preferredLanguage in ['pt', 'en', 'es'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidLessonProgress(data) {
+      return data.lessonNumber is int && data.lessonNumber >= 1 && data.lessonNumber <= 27 &&
+             data.completed is bool &&
+             data.quizScore is int && data.quizScore >= 0 && data.quizScore <= 100 &&
+             data.quizTotal is int && data.quizTotal >= 1 && data.quizTotal <= 20 &&
+             data.studySeconds is int && data.studySeconds >= 0 && data.studySeconds <= 1000000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBibleNote(data) {
+      return data.bookId is string && data.bookId.size() >= 1 && data.bookId.size() <= 40 &&
+             data.chapter is int && data.chapter >= 1 && data.chapter <= 150 &&
+             data.verse is int && data.verse >= 1 && data.verse <= 180 &&
+             data.referenceLabel is string && data.referenceLabel.size() >= 1 && data.referenceLabel.size() <= 80 &&
+             data.noteText is string && data.noteText.size() >= 1 && data.noteText.size() <= 2000 &&
+             data.highlightColor in ['gold', 'sky', 'emerald', 'coral', 'none'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'xp', 'streakDays', 'totalStudySeconds',
+                         'completedLessonIds', 'unlockedBadgeIds', 'selectedPlanId',
+                         'completedPlanDays', 'preferredLanguage', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'xp', 'streakDays', 'totalStudySeconds',
+                         'completedLessonIds', 'unlockedBadgeIds', 'selectedPlanId',
+                         'completedPlanDays', 'preferredLanguage', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserBackupProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserBackupProfile(incoming(), userId) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'xp', 'streakDays', 'totalStudySeconds',
+                         'completedLessonIds', 'unlockedBadgeIds', 'selectedPlanId',
+                         'completedPlanDays', 'preferredLanguage', 'updatedAt'
+                       ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /lesson_progress/{lessonId} {
+        allow get: if isOwner(userId) && isValidId(lessonId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(lessonId) &&
+                         incoming().keys().hasAll([
+                           'lessonNumber', 'completed', 'quizScore', 'quizTotal',
+                           'studySeconds', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'lessonNumber', 'completed', 'quizScore', 'quizTotal',
+                           'studySeconds', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidLessonProgress(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(lessonId) &&
+                         incoming().lessonNumber == existing().lessonNumber &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidLessonProgress(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'completed', 'quizScore', 'quizTotal', 'studySeconds', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(lessonId);
+      }
+
+      match /bible_notes/{noteId} {
+        allow get: if isOwner(userId) && isValidId(noteId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         incoming().keys().hasAll([
+                           'bookId', 'chapter', 'verse', 'referenceLabel',
+                           'noteText', 'highlightColor', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'bookId', 'chapter', 'verse', 'referenceLabel',
+                           'noteText', 'highlightColor', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidBibleNote(incoming());
+
+        allow update: if isOwner(userId) &&
+                         isValidId(noteId) &&
+                         incoming().bookId == existing().bookId &&
+                         incoming().chapter == existing().chapter &&
+                         incoming().verse == existing().verse &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidBibleNote(incoming()) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'referenceLabel', 'noteText', 'highlightColor', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(noteId);
+      }
+    }
+  }
+}
